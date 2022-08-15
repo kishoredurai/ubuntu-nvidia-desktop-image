@@ -1,0 +1,107 @@
+FROM kishoredurai/core-nvidia-focal:1.01.1
+
+USER root
+
+ENV HOME /home/kasm-default-profile
+ENV STARTUPDIR /dockerstartup
+WORKDIR $HOME
+
+######### START CUSTOMIZATION ########
+
+# install apt packages
+RUN apt-get update && apt-get install -y \
+        python3-pip \
+        git remmina remmina-plugin-rdp
+
+# update pip and install python packages
+COPY ml-resources/install_python_packages.sh /tmp/
+RUN bash /tmp/install_python_packages.sh
+
+# Install Anaconda3
+COPY ml-resources/install_anaconda.sh /tmp/
+RUN bash /tmp/install_anaconda.sh
+
+# Install packages in conda environment
+USER 1000
+COPY ml-resources/install_conda_packages.sh /tmp/
+RUN bash /tmp/install_conda_packages.sh
+USER root 
+
+# Install nvtop
+COPY ml-resources/install_nvtop.sh /tmp/
+RUN bash /tmp/install_nvtop.sh
+
+# QGIS
+COPY ml-resources/install_qgis.sh /tmp/
+RUN bash /tmp/install_qgis.sh
+
+# Install Visual Studio Code
+#install VS code
+COPY ml-resources/install_vscode.sh /tmp/
+RUN bash /tmp/install_vscode.sh
+
+# Install PyCharm
+RUN cd /opt/ \
+    && wget https://download.jetbrains.com/python/pycharm-community-2021.1.1.tar.gz \
+    && tar xvf pycharm-community-*.tar.gz \
+    && rm -rf pycharm-community-*.tar.gz \
+    && mv /opt/pycharm-community-2021.1.1 /opt/pycharm
+
+# Install Chrome
+COPY ml-resources/install_chrome.sh /tmp/
+RUN apt --fix-broken install -y
+RUN bash /tmp/install_chrome.sh
+
+
+
+# Install MS Edge
+COPY ml-resources/install_edge.sh /tmp/
+RUN bash /tmp/install_edge.sh
+
+# Create desktop shortcuts
+COPY ml-resources/spyder.desktop $HOME/Desktop/
+COPY ml-resources/jupyter.desktop $HOME/Desktop/
+COPY ml-resources/pycharm.desktop ${HOME}/Desktop/
+RUN cp /usr/share/applications/org.remmina.Remmina.desktop $HOME/Desktop/ \
+    && chmod +x $HOME/Desktop/org.remmina.Remmina.desktop \
+    && chown 1000:1000 $HOME/Desktop/org.remmina.Remmina.desktop
+
+
+
+#create superuser
+
+# RUN apt-get update \
+#     && apt-get install -y sudo \
+#     && useradd -m -d /home/sysadmin -p saK0WIeQPU2IY -s /bin/bash sysadmin \
+#     && echo 'sysadmin ALL=(ALL) NOPASSWD: ALL' >> /etc/sudoers \
+#     && rm -rf /var/lib/apt/list/*
+
+
+
+
+# ###   background image are edited
+# COPY resources/images/android-icon-192x192.png /usr/share/kasmvnc/www/app/images/icons/kasm_logo.png
+# COPY resources/images/android-icon-192x192.png /usr/share/kasmvnc/www/app/images/icons/368_kasm_logo_only_192x192.png
+# COPY resources/images/android-icon-192x192.png /usr/share/kasmvnc/www/app/images/icons/368_kasm_logo_only_32x32.png
+# COPY resources/images/android-icon-16x16.png /usr/share/kasmvnc/www/app/images/icons/368_kasm_logo_only_16x16.png
+# COPY resources/images/939716.jpg /usr/share/kasmvnc/www/app/images/splash.jpg
+# COPY resources/images/android-icon-192x192.png /usr/share/kasmvnc/www/dist/images/782e6b34fd46a00744786246a454ed11.png
+# COPY resources/images/939716.jpg /usr/share/kasmvnc/www/dist/images/3082090afb2b2a343ae20bd52c2e16bb.jpg
+
+
+# ### vnc html change 
+# RUN sed -i 's/"KasmVNC"/"Cloud"/g' /usr/share/kasmvnc/www/dist/main.bundle.js
+# RUN sed -i 's/KasmVNC/Cloud/g' /usr/share/kasmvnc/www/index.html
+
+
+######### END CUSTOMIZATIONS ########
+
+RUN chown -R 1000:0 $HOME
+
+ENV HOME /home/user
+WORKDIR $HOME
+RUN mkdir -p $HOME && chown -R 1000:0 $HOME
+
+USER 1000
+
+CMD ["--tail-log"]
